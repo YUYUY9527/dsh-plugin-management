@@ -1,0 +1,64 @@
+# 发版工作流（Trusted Publishing / OIDC）—— 仓库里不存任何 npm token。
+#
+# 一次性准备（npm 不允许为「尚不存在」的包配置可信发布，所以第一次必须人工发）：
+#   1. 先人工发一次（需要 2FA）：
+#        npm login --registry https://registry.npmjs.org/
+#        npm publish --registry https://registry.npmjs.org/
+#      ⚠️ bypass-2FA 的 token 已被 npm 禁止直接发布，必须用交互式 2FA 会话。
+#   2. 打开 https://www.npmjs.com/package/dsh-plugin-management/access
+#      → Trusted Publisher → GitHub Actions，填：
+#        Organization or user : YUYUY9527
+#        Repository           : dsh-plugin-management
+#        Workflow filename    : publish.yml
+#        Environment          : （留空）
+#   3. 之后发版只需：
+#        git tag v1.0.1 && git push origin v1.0.1
+#
+# 未完成第 2 步时本工作流会失败（预期），不影响日常提交与 CI 之外的流程。
+
+name: publish
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      # 可信发布要求 npm >= 11.5.1（node 24 自带的 npm 已满足，这里兜底升到最新）
+      - name: 确认 npm 支持可信发布
+        run: |
+          npm install -g npm@latest
+          npm --version
+
+      - name: 版本自检（tag 必须与 package.json 一致）
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          pkg="$(node -p "require('./package.json').version")"
+          if [ "$tag" != "$pkg" ]; then
+            echo "tag ${GITHUB_REF_NAME} 与 package.json version ${pkg} 不一致" >&2
+            exit 1
+          fi
+
+      - name: 语法检查
+        run: npm run check
+
+      - name: 跑测试
+        run: npm test
+
+      # 无 NODE_AUTH_TOKEN：npm 通过 OIDC 交换短期凭据，并自动附带 provenance
+      - name: 发布
+        run: npm publish --provenance --access public

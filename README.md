@@ -166,6 +166,24 @@ dsh plugin --profile web remove dsh-plugin-management   # 官方路径
 
 改完跑 `npm test`：25+ 条用例覆盖扫描、清单合并、命令拼装、兜底路径与打包契约，能在不看 UI 的情况下拦住大多数回归。
 
+### 发版（维护者）
+
+**首次发布必须人工带 2FA 完成** —— npm 不允许为「尚不存在」的包配置可信发布，且 bypass-2FA 的 token 已被 npm 禁止直接发布（[GitHub 公告](https://github.blog/changelog/2026-07-31-restricting-npm-bypass-2fa-granular-access-tokens/)）：
+
+```bash
+npm login --registry https://registry.npmjs.org/
+npm publish --registry https://registry.npmjs.org/
+```
+
+之后走 CI 可信发布，本地不再需要任何 token：在 npmjs 的包设置里配置 Trusted Publisher
+（GitHub Actions → `YUYUY9527/dsh-plugin-management` → workflow `publish.yml`），此后
+
+```bash
+git tag v1.0.1 && git push origin v1.0.1
+```
+
+会自动跑检查 + 测试，并以 OIDC + provenance 发布。工作流见 `.github/workflows/publish.yml`。
+
 ## 开发
 
 ```bash
