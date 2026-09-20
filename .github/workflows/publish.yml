@@ -14,6 +14,10 @@
 #   3. 之后发版只需：
 #        git tag v1.0.1 && git push origin v1.0.1
 #
+# 可选加固（推荐）：在 npmjs 把该可信发布配置设为 **stage-only** —— 此时把下面
+# `npm publish` 换成 `npm stage publish`，CI 只把 tarball 送进 stage 队列，
+# 由维护者在网页上用 2FA 批准后才真正上架（要求 npm CLI >= 11.15 / Node >= 22.14）。
+#
 # 未完成第 2 步时本工作流会失败（预期），不影响日常提交与 CI 之外的流程。
 
 name: publish

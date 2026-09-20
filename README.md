@@ -168,21 +168,37 @@ dsh plugin --profile web remove dsh-plugin-management   # 官方路径
 
 ### 发版（维护者）
 
-**首次发布必须人工带 2FA 完成** —— npm 不允许为「尚不存在」的包配置可信发布，且 bypass-2FA 的 token 已被 npm 禁止直接发布（[GitHub 公告](https://github.blog/changelog/2026-07-31-restricting-npm-bypass-2fa-granular-access-tokens/)）：
+**npm 没有 "pending publisher"**：可信发布配置只能挂到**已存在**的包上（[npm-trust 文档](https://www.gsp.com/cgi-bin/man.cgi?topic=npm-trust)：*Package must exist*），staged publishing 同样要求包已存在。所以顺序是「先人工发一次 → 再切成可信发布」。
+
+**第 0 步 · 人工发首个版本**（bypass-2FA 的 token 已被 npm 禁止直接发布，必须用 2FA 验证码）
 
 ```bash
 npm login --registry https://registry.npmjs.org/
-npm publish --registry https://registry.npmjs.org/
+npm publish --registry https://registry.npmjs.org/ --otp=<6位验证码>
 ```
 
-之后走 CI 可信发布，本地不再需要任何 token：在 npmjs 的包设置里配置 Trusted Publisher
-（GitHub Actions → `YUYUY9527/dsh-plugin-management` → workflow `publish.yml`），此后
+**第 1 步 · 配置 Trusted Publisher**（一次性；配置动作本身需要网页 2FA 交互）
+
+打开 https://www.npmjs.com/package/dsh-plugin-management/access → **Trusted Publisher** → GitHub Actions：
+
+| 字段 | 值 |
+| --- | --- |
+| Organization or user | `YUYUY9527` |
+| Repository | `dsh-plugin-management` |
+| Workflow filename | `publish.yml` |
+| Environment | 留空（若填了，每次发布还要过 GitHub environment 审批） |
+
+可选加固：把该配置设为 **stage-only** —— 只接受 `npm stage publish`，直接 `npm publish` 会被拒。CI 只把 tarball 送进 stage 队列，再由你在网页上用 2FA 批准才真正上架（[staged publishing](https://github.blog/changelog/2026-05-22-staged-publishing-and-new-install-time-controls-for-npm/)，需 npm CLI ≥ 11.15 / Node ≥ 22.14）。
+
+**第 2 步 · 之后发版**
 
 ```bash
+npm version patch && git push
 git tag v1.0.1 && git push origin v1.0.1
 ```
 
-会自动跑检查 + 测试，并以 OIDC + provenance 发布。工作流见 `.github/workflows/publish.yml`。
+`.github/workflows/publish.yml` 会跑 `npm run check` + `npm test`，然后以 OIDC + provenance 发布，本地不需要任何 token。
+同一个包可以配多个可信发布者（[2026-09 起支持](https://github.blog/changelog/2026-09-03-multiple-trusted-publishing-configurations-for-npm)），例如同时允许 release 工作流与手工 dispatch。
 
 ## 开发
 
