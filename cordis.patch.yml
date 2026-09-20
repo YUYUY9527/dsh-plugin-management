@@ -1,0 +1,20 @@
+# dsh-plugin-management bundle 层：只插入一行引导插件。
+#
+# 为什么只有一行：本插件不改变任何已有行的行为（不接管 web、不改 tools、
+# 不动其它插件），它只提供「设置 → 插件 → 外部插件」页 + host API。
+# 因此不需要像 dsh-tinyfish-search 那样覆盖 web / tool-web 行。
+#
+# 行说明：
+#   id / name 保持一致，都是包名：Loader 用 name 做模块解析，pnpm 把包装进
+#   profile 的 node_modules，Node 解析即命中；id 是给后续层按 id 覆盖用的
+#   （想禁用本插件，在 profile 的 cordis.patch.yml 里写
+#   `- id: dsh-plugin-management` + `disabled: true`）。
+#
+# 可用配置（全部可选，省略即用默认值）：
+#   apiPath   默认 /dsh-plugin-management/api —— host 给浏览器面板用的 HTTP 前缀。
+#             只有在与别的插件路由撞了（同名 kind+path 会抛错）时才需要改。
+
+- insert:
+    - id: dsh-plugin-management
+      name: dsh-plugin-management
+      config: {}

@@ -1,0 +1,13 @@
+# 依赖与构建产物：本包是纯 JS、零依赖，lib/ 就是源码 + 产物，必须提交，不要忽略。
+node_modules/
+.pnpm-store/
+*.tgz
+
+# 日志与临时文件
+*.log
+npm-debug.log*
+pnpm-debug.log*
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
