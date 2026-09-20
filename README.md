@@ -34,20 +34,24 @@
 
 ## 安装
 
-三种方式任选，装完**重启 dsh** 生效（bundle 装配在启动时完成）。
+装完**重启 dsh** 生效（bundle 装配在启动时完成）。`add` 后面的 spec 会**原样转发给 pnpm**，所以 pnpm 支持的写法都能用：
 
 ```bash
-# A. 本地目录（开发/自用，改完代码重装即可）
-dsh plugin --profile web add D:\fubin\dev\mini-tools\dsh\dsh-plugin-management
+# —— 公网获取（使用者 / 分发）——
+# ① 锁定版本，推荐：git tag
+dsh plugin --profile web add github:YUYUY9527/dsh-plugin-management#v1.0.0
 
-# B. GitHub（纯 JS，无构建步骤，git 安装不会被 pnpm 的 build 拦截）
+# ② 跟随最新代码
 dsh plugin --profile web add github:YUYUY9527/dsh-plugin-management
 
-# C. npm（若已发布）
+# ③ Release 包 URL：只需能上 HTTPS，本机不需要 git
+dsh plugin --profile web add https://github.com/YUYUY9527/dsh-plugin-management/releases/download/v1.0.0/dsh-plugin-management-1.0.0.tgz
+
+# ④ npm registry（尚未发布，发布后对所有人生效）
 dsh plugin --profile web add dsh-plugin-management
 
-# D. Release 包（锁定版本 / 内网分发）
-dsh plugin --profile web add D:\下载目录\dsh-plugin-management-1.0.0.tgz
+# —— 本地目录（开发 / 自用，改完代码重启即可）——
+dsh plugin --profile web add D:\fubin\dev\mini-tools\dsh\dsh-plugin-management
 ```
 
 `--profile` 必须是**你实际在跑的那个 profile**（`dsh web` 就是 `web`）。
@@ -57,7 +61,7 @@ dsh plugin --profile web add D:\下载目录\dsh-plugin-management-1.0.0.tgz
 dsh --profile web --dump-config | grep dsh-plugin-management
 ```
 
-详细步骤、验证与排查见 [INSTALL.md](INSTALL.md)。
+公网各方式的取舍、npm 发布步骤与排查见 [INSTALL.md](INSTALL.md)。
 
 ## 使用
 

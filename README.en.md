@@ -23,26 +23,26 @@ and update them with one click from **Settings → Plugins → External plugins*
 
 ## Install
 
+Whatever follows `add` is forwarded verbatim to pnpm, so every pnpm spec works. Then **restart dsh** (bundles are composed at boot).
+
 ```bash
-# A. local directory (development / self-use)
+# from the public internet
+dsh plugin --profile web add github:YUYUY9527/dsh-plugin-management#v1.0.0   # pinned tag (recommended)
+dsh plugin --profile web add github:YUYUY9527/dsh-plugin-management          # follow main
+dsh plugin --profile web add https://github.com/YUYUY9527/dsh-plugin-management/releases/download/v1.0.0/dsh-plugin-management-1.0.0.tgz   # HTTPS only, no git required
+dsh plugin --profile web add dsh-plugin-management                           # npm (not published yet)
+
+# from a local checkout (development)
 dsh plugin --profile web add /path/to/dsh-plugin-management
-
-# B. GitHub (plain JS, no build step — git installs cannot be blocked by pnpm's build gate)
-dsh plugin --profile web add github:YUYUY9527/dsh-plugin-management
-
-# C. npm (when published)
-dsh plugin --profile web add dsh-plugin-management
 ```
 
-Use the profile you actually run (`dsh web` → `web`), then **restart dsh** (bundles are composed at boot).
-
-Verify the bundle was registered:
+Use the profile you actually run (`dsh web` → `web`). Verify the bundle was registered:
 
 ```bash
 dsh --profile web --dump-config | grep dsh-plugin-management
 ```
 
-See [INSTALL.md](INSTALL.md) (Chinese) for verification and troubleshooting.
+See [INSTALL.md](INSTALL.md) (Chinese) for the trade-offs between these forms, npm publishing, and troubleshooting.
 
 ## Usage
 

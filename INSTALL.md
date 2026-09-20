@@ -12,42 +12,72 @@
 
 ---
 
-## 2. 三种安装方式
+## 2. 安装方式：本地 与 公网
 
-### 方式 A：本地目录（开发 / 自用，推荐）
+先记住一条：`dsh plugin --profile <p> add <spec>` 里的 `<spec>` 会**原样转发给 pnpm**，
+所以 pnpm 支持的 spec 全都能用 —— 本地目录、`github:`、tag、tarball URL、registry 名。
+
+### 2.1 本地目录（开发 / 自用）
 
 ```powershell
 dsh plugin --profile web add D:\fubin\dev\mini-tools\dsh\dsh-plugin-management
 ```
 
 - `--profile web` 必须是**你实际在跑的 profile**（`dsh web` → `web`；跑的是别的名字就换成别的）。
-- pnpm 会以 `link:` 形式接入本地目录，所以**改完代码不用重装，重启即可生效**。
-- 纯 JS、无构建步骤，不需要 npm install。
+- pnpm 以 `link:` 形式接入本地目录，所以**改完代码不用重装，重启即可生效**。
+- 纯 JS、无构建步骤，不需要 `npm install`。
 
-### 方式 B：GitHub（发布 / 分享）
+### 2.2 公网获取（别人拿到 URL 就能装）
 
-```bash
+**① Release 包 URL —— 最省事，只要求能上 HTTPS，本机不需要 git**
+
+```powershell
+dsh plugin --profile web add https://github.com/YUYUY9527/dsh-plugin-management/releases/download/v1.0.0/dsh-plugin-management-1.0.0.tgz
+```
+
+**② git tag —— 锁定版本，推荐生产环境**
+
+```powershell
+dsh plugin --profile web add github:YUYUY9527/dsh-plugin-management#v1.0.0
+```
+
+**③ git 默认分支 —— 跟随最新代码**
+
+```powershell
 dsh plugin --profile web add github:YUYUY9527/dsh-plugin-management
 ```
 
-> git 安装不需要本机有 TypeScript / 构建链——本包 `lib/*.js` 就是产物。
-> 这也是刻意选纯 JS 的原因：pnpm 默认会拦截 git 包的 `prepare` 构建脚本，TS 插件常常卡在这一步。
+**④ npm registry —— 需要包已发布（当前尚未发布，见下）**
 
-### 方式 C：npm（若已发布到 registry）
-
-```bash
+```powershell
 dsh plugin --profile web add dsh-plugin-management
 ```
 
-### 方式 D：Release 包（固定版本 / 走内网分发）
+对比：
 
-从 [Releases](https://github.com/YUYUY9527/dsh-plugin-management/releases) 下载 `dsh-plugin-management-<版本>.tgz`，然后：
+| 方式 | 本机需要 | 版本是否锁定 | 适用 |
+| --- | --- | --- | --- |
+| ① Release tgz URL | 只要能访问 github.com | ✅ 锁死在 URL 里 | 分发 / 复现环境 |
+| ② `github:…#v1.0.0` | `git` + 能访问 github.com | ✅ 锁 tag/commit | 生产环境 |
+| ③ `github:…` | `git` + 能访问 github.com | ❌ 跟随 main | 追新 |
+| ④ registry 名 | 能访问 registry | 语义化版本 | 常规分发 |
+| 本地目录 | 无 | — | 开发 |
 
-```powershell
-dsh plugin --profile web add D:\下载目录\dsh-plugin-management-1.0.0.tgz
+> ②③ 都不需要本机有 TypeScript / 构建链：本包 `lib/*.js` 就是产物。
+> 这是刻意选纯 JS 的原因 —— pnpm 默认拦截 git 依赖的 `prepare` 构建脚本，TS 插件常常卡在这一步。
+>
+> 网络受限时：`github:` 走 git 协议（需要能访问 github.com），① 走 HTTPS 下载（更宽松）；
+> 国内镜像只影响 ④，`pnpm config set registry https://registry.npmmirror.com` 即可加速安装（但发布要发到官方 registry，见下）。
+
+### 2.3 想真的发到 npm（目前 `dsh-plugin-management` 这个名字在 npmjs 上还没被占用）
+
+```bash
+npm login --registry https://registry.npmjs.org/
+npm publish --registry https://registry.npmjs.org/ --access public
 ```
 
-适合需要**锁定版本**或走内网分发的场景；tgz 里已包含 `lib/`、`cordis.patch.yml` 与文档，无需构建。
+注意本机 npm 当前 registry 指向 `registry.npmmirror.com`（只做安装镜像，不能发布），
+所以 `publish` 必须显式指定官方 registry。发布后方式 ④ 对所有人都可用。
 
 ### 装完必做：重启 dsh
 
