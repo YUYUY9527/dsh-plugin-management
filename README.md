@@ -140,7 +140,7 @@ dsh plugin --profile web remove dsh-plugin-management   # 官方路径
 
 - **纯 JavaScript，零构建**：`lib/*.js` 就是源码也是产物，`github:` 安装不需要本机有构建环境（pnpm 默认拦截 git 包的 build 脚本，TS 插件很容易卡在这一步）。
 - **没有硬依赖**：`webServer` / `tools` / `shell` / `clientModules` 全部惰性获取。缺 `webServer` 就没有面板，缺 `tools` 就没有模型工具，但插件本身永远能加载。
-- **模型工具的双路径**：能解析到 `@deepseek-ai/dsh-tools` 时用官方 `defineTool`（带参数校验），解析不到就用本地 JSON Schema 注册 —— 外挂包不该因为一个可选包而整体挂掉。
+- **模型工具的双路径**：能解析到 `@deepseek-ai/dsh-tools` 时用官方 `defineTool`（带参数校验），解析不到就用本地转换的 raw JSON Schema 注册 —— 外挂包不该因为一个可选包而整体挂掉。注意两种形态**不能混用**（`defineTool` 吃 DSL、`register` 吃 raw，`{type:'json'}` 只在 DSL 里合法），细节见 `lib/tool.js` 头注释。
 - **不做自动重启**：更新落地 ≠ 生效。插件把「需重启」明确写在结果里，而不是替用户重启进程。
 
 ## 已知限制

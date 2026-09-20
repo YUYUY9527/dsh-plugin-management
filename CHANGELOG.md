@@ -2,6 +2,18 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/) 与 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 结构。
 
+## [1.0.1] - 2026-09-20
+
+### 修复
+
+- **模型工具 `external_plugins` 在真实部署里从未注册**（1.0.0 的静默故障）：`createToolSpec()` 把 **JSON Schema 形态**的参数喂给 `defineTool()`（报 `parameters.type must be a value schema object`），回落时又把 author-only 的 `output.schema: { type: 'json' }` 交给 `ctx.tools.register()`（被 `assertSupportedJsonSchema` 拒绝 —— raw 形态里 `json` 非法，等价于 `{}`）。两次失败都只写一行日志，工具静默消失。
+  现在两种 schema 形态彻底分开：**DSL 交 `defineTool`，raw 交 `register`**，并用回归测试钉住（`lib/tool.js` 头注释留了完整的坑位说明）。
+- 参数非法时统一返回 JSON `{ ok: false, error }`，不再从 `execute` 抛错（两条路径行为一致）。
+
+### 新增
+
+- host 把**工具注册状态**随 `/inventory` 回给面板：注册失败会直接在「外部插件」页显示 `模型工具未注册：<state>（<原因>）`，不必再去翻 dsh 日志。
+
 ## [1.0.0] - 2026-09-20
 
 首个公开发布。

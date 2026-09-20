@@ -5,7 +5,42 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { PARAMETERS, createToolSpec, normalizeArgs, parameterSpecToJsonSchema } from '../lib/tool.js'
+import { PARAMETERS, createToolSpec, normalizeArgs, parameterSpecToJsonSchema, toRawToolSpec, valueSpecToJsonSchema } from '../lib/tool.js'
+
+/**
+ * 回归：schema 形态必须匹配各自的消费者。
+ * 曾经把 JSON-Schema 形态喂给 defineTool、又把 {type:'json'} 喂给 register()，
+ * 结果工具静默不注册（v1.0.0 的真实故障）。
+ */
+test('createToolSpec 产出 DSL 形态（交给 defineTool，而不是 register）', () => {
+  const spec = createToolSpec({ inventory: async () => ({}), update: async () => ({}) })
+  // DSL 的标志：直接以参数名为键，且没有 JSON Schema 的 properties 包装
+  assert.equal(spec.parameters.action.type, 'string')
+  assert.equal(spec.parameters.action.required, true)
+  assert.deepEqual(spec.parameters.action.enum, ['list', 'update'])
+  assert.equal(spec.parameters.properties, undefined, 'parameters 不能是 JSON Schema')
+  // output.schema 是 author-only 的 json 节点，defineTool 会转成 {}
+  assert.deepEqual(spec.output.schema, { type: 'json' })
+  assert.equal(typeof spec.execute, 'function')
+  assert.equal(typeof spec.output.render, 'function')
+})
+
+test('toRawToolSpec 产出可交给 ctx.tools.register 的 raw 形态', () => {
+  const raw = toRawToolSpec(createToolSpec({ inventory: async () => ({}), update: async () => ({}) }))
+  assert.equal(raw.parameters.type, 'object')
+  assert.equal(raw.parameters.additionalProperties, false)
+  assert.deepEqual(raw.parameters.required, ['action'])
+  assert.deepEqual(raw.parameters.properties.action.enum, ['list', 'update'])
+  // 关键：raw 形态里 {type:'json'} 非法，必须降级为「任意 JSON」= {}
+  assert.deepEqual(raw.output.schema, {})
+  assert.equal(raw.output.schema.type, undefined)
+})
+
+test('valueSpecToJsonSchema：json 节点等价于空 schema', () => {
+  assert.deepEqual(valueSpecToJsonSchema({ type: 'json' }), {})
+  assert.deepEqual(valueSpecToJsonSchema(undefined), {})
+  assert.deepEqual(valueSpecToJsonSchema({ type: 'string' }), { type: 'string' })
+})
 
 test('parameterSpecToJsonSchema：隐式参数对象 + required + enum', () => {
   const schema = parameterSpecToJsonSchema()
@@ -85,4 +120,16 @@ test('createToolSpec：业务异常转成 JSON error，不把栈抛给模型', a
     ok: false,
     error: 'profile not found: nope',
   })
+})
+
+test('createToolSpec：非法参数回 JSON error（真实调度会比这更早拦一次）', async () => {
+  const spec = createToolSpec({ inventory: async () => ({}), update: async () => ({}) })
+  const result = await spec.execute({ action: 'nope' })
+  assert.equal(result.ok, false)
+  assert.match(result.error, /action must be/)
+  // 两条路（defineTool / raw）都不该把参数异常抛给调度层
+  const raw = toRawToolSpec(spec)
+  const rawResult = await raw.execute({ action: 'nope' })
+  assert.equal(rawResult.ok, false)
+  assert.match(rawResult.error, /action must be/)
 })
