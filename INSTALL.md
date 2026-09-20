@@ -69,15 +69,12 @@ dsh plugin --profile web add dsh-plugin-management
 > 网络受限时：`github:` 走 git 协议（需要能访问 github.com），① 走 HTTPS 下载（更宽松）；
 > 国内镜像只影响 ④，`pnpm config set registry https://registry.npmmirror.com` 即可加速安装（但发布要发到官方 registry，见下）。
 
-### 2.3 想真的发到 npm（目前 `dsh-plugin-management` 这个名字在 npmjs 上还没被占用）
+### 2.3 关于 npm（当前不可用）
 
-```bash
-npm login --registry https://registry.npmjs.org/
-npm publish --registry https://registry.npmjs.org/ --access public
-```
+本包**暂未发布到 npm**（维护者账号的 2FA 阻塞了首次发布），所以方式 ④ 现在用不了 —— 请用 ①②③，尤其是 ①（只需能上 HTTPS，本机不用装 git）。
 
-注意本机 npm 当前 registry 指向 `registry.npmmirror.com`（只做安装镜像，不能发布），
-所以 `publish` 必须显式指定官方 registry。发布后方式 ④ 对所有人都可用。
+- 名字 `dsh-plugin-management` 在 npmjs 上尚未被占用，将来要发仍然可以
+- 发布 + 切可信发布的完整步骤见 README「发版（维护者）」一节
 
 ### 装完必做：重启 dsh
 

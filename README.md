@@ -168,37 +168,21 @@ dsh plugin --profile web remove dsh-plugin-management   # 官方路径
 
 ### 发版（维护者）
 
-**npm 没有 "pending publisher"**：可信发布配置只能挂到**已存在**的包上（[npm-trust 文档](https://www.gsp.com/cgi-bin/man.cgi?topic=npm-trust)：*Package must exist*），staged publishing 同样要求包已存在。所以顺序是「先人工发一次 → 再切成可信发布」。
-
-**第 0 步 · 人工发首个版本**（bypass-2FA 的 token 已被 npm 禁止直接发布，必须用 2FA 验证码）
+本包的分发方式是 **GitHub Release + git 安装**，不发布到 npm：
 
 ```bash
-npm login --registry https://registry.npmjs.org/
-npm publish --registry https://registry.npmjs.org/ --otp=<6位验证码>
+npm version patch && git push && git tag v1.0.1 && git push origin v1.0.1
+npm pack     # 产出 tgz，作为固定版本上传到该 tag 的 Release
 ```
 
-**第 1 步 · 配置 Trusted Publisher**（一次性；配置动作本身需要网页 2FA 交互）
+装法见「安装」一节的方式 ①②③；Release 资产可被 `dsh plugin add <tgz-url>` 直接使用。
 
-打开 https://www.npmjs.com/package/dsh-plugin-management/access → **Trusted Publisher** → GitHub Actions：
+**npm 路径当前未启用**（维护者账号的 2FA 阻塞了首次发布），材料保留备用：
 
-| 字段 | 值 |
-| --- | --- |
-| Organization or user | `YUYUY9527` |
-| Repository | `dsh-plugin-management` |
-| Workflow filename | `publish.yml` |
-| Environment | 留空（若填了，每次发布还要过 GitHub environment 审批） |
-
-可选加固：把该配置设为 **stage-only** —— 只接受 `npm stage publish`，直接 `npm publish` 会被拒。CI 只把 tarball 送进 stage 队列，再由你在网页上用 2FA 批准才真正上架（[staged publishing](https://github.blog/changelog/2026-05-22-staged-publishing-and-new-install-time-controls-for-npm/)，需 npm CLI ≥ 11.15 / Node ≥ 22.14）。
-
-**第 2 步 · 之后发版**
-
-```bash
-npm version patch && git push
-git tag v1.0.1 && git push origin v1.0.1
-```
-
-`.github/workflows/publish.yml` 会跑 `npm run check` + `npm test`，然后以 OIDC + provenance 发布，本地不需要任何 token。
-同一个包可以配多个可信发布者（[2026-09 起支持](https://github.blog/changelog/2026-09-03-multiple-trusted-publishing-configurations-for-npm)），例如同时允许 release 工作流与手工 dispatch。
+- npm **没有 "pending publisher"**：可信发布只能挂到已存在的包上，staged publishing 同样要求包已存在，
+  所以第一步必须人工发布一次（`npm publish --otp=<6位码>` 或带 Bypass 2FA 的 Granular Access Token）
+- 首版发布后，在包设置里配 Trusted Publisher（GitHub Actions → `YUYUY9527/dsh-plugin-management` → workflow `publish.yml`），
+  再把 `.github/workflows/publish.yml` 的触发条件从 `workflow_dispatch` 改回 `tags: ['v*']` 即可全自动发版（OIDC + provenance，本地零 token）
 
 ## 开发
 

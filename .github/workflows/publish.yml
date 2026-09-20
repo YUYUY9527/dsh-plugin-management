@@ -1,5 +1,10 @@
 # 发版工作流（Trusted Publishing / OIDC）—— 仓库里不存任何 npm token。
 #
+# ⚠️ 状态：**未启用（备用）**。本包当前的分发方式是 GitHub Release + `dsh plugin add github:…`，
+#   不发布到 npm（维护者账号的 2FA 阻塞了首次发布）。因此这里**故意只保留手动触发**：
+#   以后打 tag 不会自动跑出一个必然失败的 job。
+#   若哪天决定发 npm，按下面两步做即可启用。
+#
 # 一次性准备（npm 不允许为「尚不存在」的包配置可信发布，所以第一次必须人工发）：
 #   1. 先人工发一次（需要 2FA）：
 #        npm login --registry https://registry.npmjs.org/
@@ -23,8 +28,7 @@
 name: publish
 
 on:
-  push:
-    tags: ['v*']
+  # 只保留手动触发（见文件头说明）：npm 路径未启用，避免 tag 推送触发必然失败的 job。
   workflow_dispatch:
 
 permissions:
