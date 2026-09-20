@@ -45,6 +45,9 @@ dsh plugin --profile web add github:YUYUY9527/dsh-plugin-management
 
 # C. npm（若已发布）
 dsh plugin --profile web add dsh-plugin-management
+
+# D. Release 包（锁定版本 / 内网分发）
+dsh plugin --profile web add D:\下载目录\dsh-plugin-management-1.0.0.tgz
 ```
 
 `--profile` 必须是**你实际在跑的那个 profile**（`dsh web` 就是 `web`）。

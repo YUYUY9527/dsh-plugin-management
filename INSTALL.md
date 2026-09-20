@@ -39,6 +39,16 @@ dsh plugin --profile web add github:YUYUY9527/dsh-plugin-management
 dsh plugin --profile web add dsh-plugin-management
 ```
 
+### 方式 D：Release 包（固定版本 / 走内网分发）
+
+从 [Releases](https://github.com/YUYUY9527/dsh-plugin-management/releases) 下载 `dsh-plugin-management-<版本>.tgz`，然后：
+
+```powershell
+dsh plugin --profile web add D:\下载目录\dsh-plugin-management-1.0.0.tgz
+```
+
+适合需要**锁定版本**或走内网分发的场景；tgz 里已包含 `lib/`、`cordis.patch.yml` 与文档，无需构建。
+
 ### 装完必做：重启 dsh
 
 bundle 的装配在**启动时**完成（读 `dsh.profile.bundles`，逐个应用其 `cordis.patch.yml`）。
