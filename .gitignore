@@ -11,3 +11,8 @@ pnpm-debug.log*
 Thumbs.db
 .idea/
 .vscode/
+
+# 本地凭据：绝不能进仓库（npm token / 临时 userconfig）
+.npmrc
+.npm-token
+*.npmrc
