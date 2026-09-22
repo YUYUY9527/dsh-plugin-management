@@ -2,6 +2,16 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/) 与 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 结构。
 
+## [1.1.0] - 2026-09-20
+
+### 新增
+
+- **每个插件下方显示自己的安装命令**：一行可直接复制的 `dsh plugin --profile <profile> add …`，右侧带「复制」按钮（`navigator.clipboard`；`127.0.0.1` 属安全上下文，可用），复制成功后 1.5 秒内显示「已复制」。命令本身是 `user-select: all`，点一下全选也能 Ctrl+C。
+  - **registry 包**：知道最新版就钉到最新版（`add <name>@<latest>`，等价于升级该包），否则 `add <name>`
+  - **本地链接 / git / tarball 依赖**：原样复用依赖里记的 spec（`add link:…`、`add github:…`）——不会把来源悄悄换成 registry
+  - 命令里的 `profile` 跟随面板当前选中的 profile（含「自动」解析结果）
+- 字段同时出现在模型工具 `external_plugins` 的 `action=list` 结果里（`installCommand`），agent 可直接转述或执行。
+
 ## [1.0.1] - 2026-09-20
 
 ### 修复

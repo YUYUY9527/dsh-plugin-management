@@ -5,7 +5,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { buildRow, createInventory } from '../lib/inventory.js'
+import { buildRow, createInventory, installCommandFor } from '../lib/inventory.js'
 
 /** 造一份扫描结果快照。 */
 function snapshot() {
@@ -185,4 +185,57 @@ test('磁盘缓存：第二次 inventory 不再重扫（refresh 才重扫）', a
   assert.equal(scans, 1)
   await service.inventory({ refresh: true })
   assert.equal(scans, 2)
+})
+
+test('installCommand：registry 包钉到最新版，本地链接原样复用 spec', async () => {
+  const { run } = makeRun(() => ({ exitCode: 0, stdout: '{}', stderr: '', timedOut: false }))
+  const service = createInventory({ run, scan: async () => snapshot(), home: 'C:/home' })
+  const plain = await service.inventory()
+  assert.equal(
+    plain.plugins.find((row) => row.name === 'dsh-a').installCommand,
+    'dsh plugin --profile web add dsh-a',
+  )
+  assert.equal(
+    plain.plugins.find((row) => row.name === 'dsh-link').installCommand,
+    'dsh plugin --profile web add link:D:/dev/dsh-link',
+  )
+
+  const outdated = JSON.stringify({ 'dsh-a': { current: '1.0.0', latest: '1.2.0', wanted: '1.1.0' } })
+  const service2 = createInventory({
+    run: makeRun(() => ({ exitCode: 1, stdout: outdated, stderr: '', timedOut: false })).run,
+    scan: async () => snapshot(),
+    home: 'C:/home',
+  })
+  const checked = await service2.inventory({ check: true })
+  assert.equal(
+    checked.plugins.find((row) => row.name === 'dsh-a').installCommand,
+    'dsh plugin --profile web add dsh-a@1.2.0',
+    '知道最新版就把命令钉到最新版（等价于升级）',
+  )
+})
+
+test('installCommandFor：git / tarball URL 用原始 spec，registry 用 name@latest，profile 可换', () => {
+  const base = { installed: '1.0.0', layer: true, declaresBundle: true, local: false }
+  assert.equal(
+    installCommandFor({ ...base, name: 'dsh-git', spec: 'github:o/r' }, null, 'web'),
+    'dsh plugin --profile web add github:o/r',
+  )
+  assert.equal(
+    installCommandFor({ ...base, name: 'dsh-tgz', spec: 'https://example.com/x.tgz' }, '2.0.0', 'web'),
+    'dsh plugin --profile web add https://example.com/x.tgz',
+  )
+  assert.equal(
+    installCommandFor({ ...base, name: 'dsh-a', spec: '^1.0.0' }, '1.2.0', 'tui'),
+    'dsh plugin --profile tui add dsh-a@1.2.0',
+  )
+  assert.equal(
+    installCommandFor({ ...base, name: 'dsh-a', spec: '^1.0.0' }, null, 'web'),
+    'dsh plugin --profile web add dsh-a',
+  )
+  assert.equal(
+    installCommandFor({ ...base, name: 'local-x', spec: 'file:../x', local: true }, null, 'web'),
+    'dsh plugin --profile web add file:../x',
+  )
+  // profile 缺省时兜底成 web，命令始终可执行
+  assert.equal(installCommandFor({ ...base, name: 'dsh-a', spec: '^1.0.0' }, null, undefined), 'dsh plugin --profile web add dsh-a')
 })

@@ -27,6 +27,7 @@
 | 外部插件清单 | 列出该 profile `dependencies` 里所有**非** `@deepseek-ai/*` 的包：已装版本、版本范围、是否生效为插件层（`dsh.profile.bundles`）、是 registry 包还是本地 `link:` |
 | 版本检查 | `pnpm outdated --format json`，区分「直接可更新（范围内）」与「可跨大版本升级（需要 `--latest`）」 |
 | 一键更新 | 单个插件 / 全部可更新插件 / 跨大版本升级，三种粒度 |
+| 每行安装命令 | 每个插件下方给出可直接复制的 `dsh plugin --profile <p> add …`（registry 包钉到最新版；本地/git/tarball 依赖原样复用 spec），带「复制」按钮 |
 | 结果可见 | 回显真实执行的命令、退出码、stdout/stderr 尾部，并提示**需要重启 dsh 才会加载新版本** |
 | profile 切换 | 自动识别「当前正在运行的是哪个 profile」，也可手动切到别的 profile |
 | 给 agent 用 | 注册模型工具 `external_plugins`（`action: list \| update`），agent 自己就能查与更新 |
