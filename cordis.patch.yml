@@ -11,10 +11,20 @@
 #   `- id: dsh-plugin-management` + `disabled: true`）。
 #
 # 可用配置（全部可选，省略即用默认值）：
-#   apiPath   默认 /dsh-plugin-management/api —— host 给浏览器面板用的 HTTP 前缀。
-#             只有在与别的插件路由撞了（同名 kind+path 会抛错）时才需要改。
+#   apiPath      默认 /dsh-plugin-management/api —— host 给浏览器面板用的 HTTP 前缀。
+#                只有在与别的插件路由撞了（同名 kind+path 会抛错）时才需要改。
+#   sandboxMode  默认 danger-full-access —— 执行 pnpm/dsh 命令时声明的沙箱模式。
+#                必须显式声明的原因：不传执行策略时，可写根是 dsh 自己的
+#                （进程 cwd），而 pnpm 装包要写 pnpm store（如
+#                D:\.pnpm-store\v11 / ~/.local/share/pnpm/store），不在任何
+#                profile 目录里 —— 那样即便沙箱健康，「一键更新」也会在写
+#                store 时 Access is denied。改成 read-only / workspace-write
+#                可以收紧，但更新会在写 store 时被拒（有意的取舍）。
 
 - insert:
     - id: dsh-plugin-management
       name: dsh-plugin-management
+      # 需要时把下面两行挪进 config（去掉注释即可）：
+      #   apiPath: /dsh-plugin-management/api
+      #   sandboxMode: danger-full-access
       config: {}

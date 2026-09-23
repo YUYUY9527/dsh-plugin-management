@@ -17,7 +17,7 @@ test('createToolSpec 产出 DSL 形态（交给 defineTool，而不是 register�
   // DSL 的标志：直接以参数名为键，且没有 JSON Schema 的 properties 包装
   assert.equal(spec.parameters.action.type, 'string')
   assert.equal(spec.parameters.action.required, true)
-  assert.deepEqual(spec.parameters.action.enum, ['list', 'update'])
+  assert.deepEqual(spec.parameters.action.enum, ['list', 'update', 'uninstall'])
   assert.equal(spec.parameters.properties, undefined, 'parameters 不能是 JSON Schema')
   // output.schema 是 author-only 的 json 节点，defineTool 会转成 {}
   assert.deepEqual(spec.output.schema, { type: 'json' })
@@ -30,7 +30,7 @@ test('toRawToolSpec 产出可交给 ctx.tools.register 的 raw 形态', () => {
   assert.equal(raw.parameters.type, 'object')
   assert.equal(raw.parameters.additionalProperties, false)
   assert.deepEqual(raw.parameters.required, ['action'])
-  assert.deepEqual(raw.parameters.properties.action.enum, ['list', 'update'])
+  assert.deepEqual(raw.parameters.properties.action.enum, ['list', 'update', 'uninstall'])
   // 关键：raw 形态里 {type:'json'} 非法，必须降级为「任意 JSON」= {}
   assert.deepEqual(raw.output.schema, {})
   assert.equal(raw.output.schema.type, undefined)
@@ -47,7 +47,7 @@ test('parameterSpecToJsonSchema：隐式参数对象 + required + enum', () => {
   assert.equal(schema.type, 'object')
   assert.equal(schema.additionalProperties, false)
   assert.deepEqual(schema.required, ['action'])
-  assert.deepEqual(schema.properties.action.enum, ['list', 'update'])
+  assert.deepEqual(schema.properties.action.enum, ['list', 'update', 'uninstall'])
   assert.equal(schema.properties.action.type, 'string')
   assert.equal(schema.properties.names.type, 'array')
   assert.equal(schema.properties.names.items.type, 'string')
@@ -115,11 +115,33 @@ test('createToolSpec：业务异常转成 JSON error，不把栈抛给模型', a
     },
   }
   const spec = createToolSpec(service)
-  assert.deepEqual(await spec.execute({ action: 'list' }), { error: 'scan exploded' })
+  assert.deepEqual(await spec.execute({ action: 'list' }), { ok: false, error: 'scan exploded' })
   assert.deepEqual(await spec.execute({ action: 'update', profile: 'nope' }), {
     ok: false,
     error: 'profile not found: nope',
   })
+})
+
+test('createToolSpec：uninstall 分派到 service.uninstall，且必须点名', async () => {
+  const calls = []
+  const service = {
+    inventory: async () => ({}),
+    update: async () => ({}),
+    uninstall: async (request) => {
+      calls.push(request)
+      return { ok: true, names: request.names }
+    },
+  }
+  const spec = createToolSpec(service)
+  const removed = await spec.execute({ action: 'uninstall', names: ['dsh-a'] })
+  assert.deepEqual(removed, { ok: true, names: ['dsh-a'] })
+  assert.deepEqual(calls[0], { action: 'uninstall', names: ['dsh-a'] })
+
+  // 不带 names 的卸载在参数层就被挡掉，绝不落到 host
+  const refused = await spec.execute({ action: 'uninstall' })
+  assert.equal(refused.ok, false)
+  assert.match(refused.error, /requires at least one .*package name/)
+  assert.equal(calls.length, 1, '被拒绝的调用不该打到 service')
 })
 
 test('createToolSpec：非法参数回 JSON error（真实调度会比这更早拦一次）', async () => {

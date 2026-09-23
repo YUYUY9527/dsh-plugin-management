@@ -161,6 +161,7 @@ dsh plugin --profile web remove dsh-plugin-management
 
 ## 7. 给 agent 的一句话
 
-> 本环境装有 dsh-plugin-management：`external_plugins` 工具可查当前 profile 的外部插件清单（版本 / 是否可更新 / 是否生效为插件层），
-> 也可直接更新（`action=update`，`latest=true` 走跨大版本）。用户在「设置 → 插件 → 外部插件」有等价 UI。
-> 更新后**必须重启 dsh** 才加载新版本。
+> 本环境装有 dsh-plugin-management：`external_plugins` 工具可查当前 profile 的外部插件清单（版本 / 是否可更新 / 是否生效为插件层 / 每行自己的安装命令），
+> 也可直接更新（`action=update`，`latest=true` 走跨大版本）或卸载（`action=uninstall`，**必须点名**，没有「卸全部」）。
+> 用户在「设置 → 插件 → 外部插件」有等价 UI（每行：安装命令可复制、更新、卸载两下确认）。
+> 更新或卸载后**必须重启 dsh** 才真正生效（文件已换，但进程里还是旧代码）。

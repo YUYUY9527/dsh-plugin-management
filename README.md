@@ -27,10 +27,11 @@
 | 外部插件清单 | 列出该 profile `dependencies` 里所有**非** `@deepseek-ai/*` 的包：已装版本、版本范围、是否生效为插件层（`dsh.profile.bundles`）、是 registry 包还是本地 `link:` |
 | 版本检查 | `pnpm outdated --format json`，区分「直接可更新（范围内）」与「可跨大版本升级（需要 `--latest`）」 |
 | 一键更新 | 单个插件 / 全部可更新插件 / 跨大版本升级，三种粒度 |
+| 卸载 | 每行一个「卸载」按钮（两下确认），走 `dsh plugin --profile <p> remove <包名>`，同步把包名从 `dsh.profile.bundles` 摘掉 |
 | 每行安装命令 | 每个插件下方给出可直接复制的 `dsh plugin --profile <p> add …`（registry 包钉到最新版；本地/git/tarball 依赖原样复用 spec），带「复制」按钮 |
-| 结果可见 | 回显真实执行的命令、退出码、stdout/stderr 尾部，并提示**需要重启 dsh 才会加载新版本** |
+| 结果可见 | 回显真实执行的命令、退出码、stdout/stderr 尾部，并提示**需要重启 dsh 才会加载新版本 / 真正卸载** |
 | profile 切换 | 自动识别「当前正在运行的是哪个 profile」，也可手动切到别的 profile |
-| 给 agent 用 | 注册模型工具 `external_plugins`（`action: list \| update`），agent 自己就能查与更新 |
+| 给 agent 用 | 注册模型工具 `external_plugins`（`action: list \| update \| uninstall`），agent 自己就能查、更新与卸载 |
 | 双语 | 界面文案跟随 `locale`（zh / en） |
 
 ## 安装
@@ -71,11 +72,11 @@ dsh --profile web --dump-config | grep dsh-plugin-management
 重启 dsh 后打开 **设置 → 插件**，会多出一个 **「外部插件」** tab（排在官方 `configurable` / `all` 之后）：
 
 - 顶部：profile 选择器（`自动` = 当前运行的 profile）、`刷新`、`一键更新 (N)`
-- 每行：包名、已装版本 · 版本范围、状态徽标（可更新到 x / 可升级到 x / 已是最新 / 本地链接 / 非插件层 / 已废弃）
-- 每行操作：`更新`（范围内）、`升级到最新`（`--latest`，会改写 `package.json` 的版本范围）
-- 底部：更新结果（含完整命令与输出）与重启提示
+- 每行：包名、已装版本 · 版本范围、状态徽标（可更新到 x / 可升级到 x / 已是最新 / 本地链接 / 非插件层 / 已废弃）、**该插件自己的安装命令**（带「复制」按钮）
+- 每行操作：`更新`（范围内）、`升级到最新`（`--latest`，会改写 `package.json` 的版本范围）、`卸载`（点一下变「确认卸载」，4 秒内再点一下执行）
+- 底部：操作结果（含完整命令与输出）与重启提示
 
-打开页面会先出本地清单（快），随后自动补一次联网版本检查。
+打开页面会先出本地清单（快），随后自动补一次联网版本检查；这一步失败会把原因显示出来，不会只留一句「未检查」。
 
 ### 模型工具
 
@@ -85,6 +86,7 @@ external_plugins action=list check=false           # 只看本地已装版本，
 external_plugins action=update profile=web         # 更新该 profile 全部外部插件
 external_plugins action=update names=["dsh-tinyfish-search"]
 external_plugins action=update latest=true         # 跨大版本升级
+external_plugins action=uninstall names=["dsh-tinyfish-search"]   # 卸载（必须点名）
 ```
 
 ### HTTP 接口（面板与其它前端复用）
@@ -95,6 +97,7 @@ external_plugins action=update latest=true         # 跨大版本升级
 | --- | --- | --- |
 | `GET` | `/inventory?profile=&check=1&refresh=1` | 清单；`check=1` 联网核对最新版本，`refresh=1` 强制重扫 profile 目录 |
 | `POST` | `/update` | body `{ profile?, names?, latest? }`，跑更新并返回命令与输出 |
+| `POST` | `/uninstall` | body `{ profile?, names }`，卸载指定包；**`names` 必填**，没有「卸全部」 |
 
 跨站请求会被拒（只接受同源），包名/profile 名都经过严格字符校验后才拼进命令。
 
@@ -127,9 +130,16 @@ $DSH_HOME/profiles/<profile>/
 - id: dsh-plugin-management
   config:
     apiPath: /dsh-plugin-management/api   # 仅在路由撞车（同名 kind+path 会抛错）时改
+    sandboxMode: danger-full-access       # 执行 pnpm/dsh 命令时声明的沙箱模式
 ```
 
+`sandboxMode` 为什么默认 `danger-full-access`：执行命令时**必须显式给出执行策略**，否则可写根是 dsh 自己的（进程 cwd），而 pnpm 装包要写 pnpm store（如 `D:\.pnpm-store\v11`、`~/.local/share/pnpm/store`）—— 它不在任何 profile 目录里，于是即便沙箱健康，「一键更新」也会在写 store 时 `Access is denied`。改成 `read-only` / `workspace-write` 可以收紧，代价是更新会被同一条规则拒掉（有意的取舍）。
+
 ## 卸载
+
+**从面板卸载**（1.2.0 起）：在「外部插件」页对应行点「卸载」→ 按钮变「确认卸载」→ 4 秒内再点一下执行。命令是 `dsh plugin --profile <p> remove <包名>`，官方转发器会同步把包名从 `dsh.profile.bundles` 摘掉；**重启 dsh 后**该插件才真正不再加载。
+
+**命令行卸载本插件自己**：
 
 ```bash
 dsh plugin --profile web remove dsh-plugin-management   # 官方路径

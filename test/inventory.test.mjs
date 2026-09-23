@@ -239,3 +239,46 @@ test('installCommandFor：git / tarball URL 用原始 spec，registry 用 name@l
   // profile 缺省时兜底成 web，命令始终可执行
   assert.equal(installCommandFor({ ...base, name: 'dsh-a', spec: '^1.0.0' }, null, undefined), 'dsh plugin --profile web add dsh-a')
 })
+
+test('uninstall：必须点名，且只卸该 profile 里真实存在的外部依赖', async () => {
+  const { run, calls } = makeRun(() => ({ exitCode: 0, stdout: 'removed', stderr: '', timedOut: false }))
+  const service = createInventory({ run, scan: async () => snapshot(), home: 'C:/home' })
+
+  // 不带 names —— 破坏性操作绝不猜，直接拒绝且不跑任何命令
+  await assert.rejects(() => service.uninstall({}), /requires at least one .*package name/)
+  // 官方包与非法名都被参数守卫挡掉
+  await assert.rejects(() => service.uninstall({ names: ['@deepseek-ai/dsh-base'] }), /requires at least one/)
+  await assert.rejects(() => service.uninstall({ names: ['dsh-a; rm -rf /'] }), /requires at least one/)
+  assert.equal(calls.length, 0, '被拒绝的调用不该执行命令')
+
+  const result = await service.uninstall({ names: ['dsh-a'] })
+  assert.equal(result.ok, true)
+  assert.equal(result.command, 'dsh plugin --profile web remove dsh-a')
+  assert.deepEqual(result.names, ['dsh-a'])
+  assert.equal(result.restartRequired, true, '卸掉的包在进程里还是活的 → 要重启')
+  assert.equal(calls[0].options.workdir, 'C:/home/profiles/web')
+  assert.match(result.stdout, /removed/)
+})
+
+test('uninstall：不存在的包名进 unknown 不拼进命令；dsh 不可用时回落 pnpm remove', async () => {
+  const { run, calls } = makeRun((_command, _options, index) =>
+    index === 1
+      ? { exitCode: 1, stdout: '', stderr: "'dsh' is not recognized as an internal or external command", timedOut: false }
+      : { exitCode: 0, stdout: '', stderr: '', timedOut: false },
+  )
+  const service = createInventory({ run, scan: async () => snapshot(), home: 'C:/home' })
+  const result = await service.uninstall({ names: ['dsh-a', 'not-installed'] })
+  assert.deepEqual(result.names, ['dsh-a'])
+  assert.deepEqual(result.unknown, ['not-installed'])
+  assert.equal(calls.length, 2)
+  assert.equal(calls[0].command, 'dsh plugin --profile web remove dsh-a')
+  assert.equal(calls[1].command, 'pnpm remove dsh-a')
+  assert.equal(result.command, 'pnpm remove dsh-a')
+})
+
+test('uninstall：全是未知包名时拒绝执行', async () => {
+  const { run, calls } = makeRun(() => ({ exitCode: 0, stdout: '', stderr: '', timedOut: false }))
+  const service = createInventory({ run, scan: async () => snapshot(), home: 'C:/home' })
+  await assert.rejects(() => service.uninstall({ names: ['nope-1', 'nope-2'] }), /not a dependency of profile web/)
+  assert.equal(calls.length, 0)
+})

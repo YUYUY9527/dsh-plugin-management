@@ -2,6 +2,22 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/) 与 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 结构。
 
+## [1.2.0] - 2026-09-20
+
+### 新增
+
+- **每行新增「卸载」按钮**：点一下变「确认卸载」，4 秒内再点一下才真的执行（破坏性操作不做单点即触发）。走 `dsh plugin --profile <p> remove <包名>` —— 官方转发器会同步把包名从 `dsh.profile.bundles` 摘掉，避免残留 bundle 行导致下次启动报错。结果面板会提示**包已移除但进程里仍是活的，要重启 dsh 才真正不加载**。
+  host 侧**必须点名**：不带 `names` 的卸载请求一律拒绝；只允许该 profile 里真实存在且非官方的依赖。模型工具同步支持 `action="uninstall"`。
+- 行配置 `config.sandboxMode`（默认 `danger-full-access`）：声明命令的执行策略，见下方修复说明。
+
+### 修复
+
+- **沙箱可写根与 workdir 对不上（一键更新必失败）**：之前没给 `ShellExecRequest` 传 `sandboxPolicy`，执行器按 dsh 自己的可写根跑，而 `pnpm update` 要写 pnpm store（如 `D:\.pnpm-store\v11`，不在任何 profile 目录里）→ **即使沙箱健康也会在写 store 时 `Access is denied`**。现在显式传 `{ mode, workspaceRoot: workdir }`。
+- **执行器/沙箱不可用不该让整条链路崩**：此前只有「shell 服务没挂载」才退 `child_process`；现在 `shell.run()` 的任何 rejection（含 `SANDBOX_UNAVAILABLE`）都归入「执行器不可用」，走同一条不受限兜底并留下告警。**沙箱明确 denied 不兜底** —— 那是策略决定，不是故障。
+- **客户端吞异常**：版本检查那一次请求的 `.catch(() => null)` 会把任何后端异常变成一句无辜的「未检查」。现在失败原因会显示在面板上。
+- **`registerTool` 被调了两次**：第二次必然抛 `tool "external_plugins" is already registered`，只剩一条无用的 warn 日志。现在只调一次。
+- **同类隐患一并堵掉**：`void mount()` 与 webServer handler 两处 fire-and-forget promise 补上 `.catch` —— **未捕获的 rejection 在 Node 22 默认策略下会直接终止 dsh 进程**（开发探针里真实踩过一次，宿主被带崩）。
+
 ## [1.1.0] - 2026-09-20
 
 ### 新增
