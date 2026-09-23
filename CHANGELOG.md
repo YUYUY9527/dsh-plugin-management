@@ -2,6 +2,16 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/) 与 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 结构。
 
+## [1.2.1] - 2026-09-20
+
+### 修复
+
+- **界面与 dsh 不同字体、整体不够清爽**：
+  - 字体改用 dsh 自己的设计变量：正文 `--dsw-font-family`、等宽 `--ds-font-family-code`、小字号 `--dsw-font-xs-13`。此前没声明正文字体、等宽写死 `ui-monospace`（Windows 上会退化成 Courier），所以看着「不是 dsh 的字」。
+  - 每行信息收敛为三行（包名 / 已装版本 · 范围 / 安装命令），安装命令改为**单行省略号截断**（长 `github:` spec 不再折行把「复制」挤到下一行），完整命令放在 `title` 悬停提示里。
+  - 徽标与操作合并为右侧固定一列，不换行、跨行对齐；行内边距、圆角、字号与设置页其它 tab 对齐。
+  - 顶部信息行压缩为 `profile · 外部插件 N · 已核对最新版本`，profile 目录移到悬停提示；底部说明缩短为一行。
+
 ## [1.2.0] - 2026-09-20
 
 ### 新增
